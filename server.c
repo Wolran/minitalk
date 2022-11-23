@@ -23,31 +23,44 @@ void	ft_putnbr(int n)
 	ft_putchar('0' + (test % 10));
 }
 
-void	ft_handler(int bit)
+void	ft_handler(int sig, siginfo_t *info, void *context)
 {
-	static char				i;
-	static unsigned char	c;
+	static char	c = 0;
+	static int	i = 1;
 
-	c += (bit == SIGUSR1) << i;
-	i++;
-	if (i > 7)
+	(void)context;
+	if (sig == SIGUSR1)
+		c = c | 0;
+	else
+		c = c | 1;
+	if (i == 8)
 	{
+		i = 1;
+		if (c == 0)
+		{
+			kill(info->si_pid, SIGUSR2);
+			return ;
+		}
 		write(1, &c, 1);
 		c = 0;
-		i = 0;
 		return ;
 	}
+	c <<= 1;
+	i++;
 }
 
 int	main(void)
 {
-	pid_t	pid;
+	struct sigaction	data;
 
-	pid = getpid();
-	ft_putnbr(pid);
+	write(1, "Server PID: ", 12);
+	ft_putnbr(getpid());
 	write(1, "\n", 1);
-	signal(SIGUSR1, ft_handler);
-	signal(SIGUSR2, ft_handler);
+	data.sa_sigaction = ft_handler;
+	sigemptyset(&data.sa_mask);
+	data.sa_flags = SA_SIGINFO;
+	sigaction(SIGUSR1, &data, NULL);
+	sigaction(SIGUSR2, &data, NULL);
 	while (1)
 		pause();
 	return (0);

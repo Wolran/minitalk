@@ -27,44 +27,61 @@ int	ft_atoi(const char *str)
 	return (res * sign);
 }
 
-int	ft_signal(int pid, char c)
+void	ft_handler(int sig)
+{
+	if (sig == SIGUSR2)
+		write(1, "The server has recived the message\n", 35);
+	exit(0);
+}
+
+void	ft_signal(int pid, char c)
 {
 	int	i;
 
-	i = 0;
-	while (i < 8)
+	i = 7;
+	while (i >= 0)
 	{
-		if ((c >> i) & 1)
+		if (((c >> i) & 1) == 0)
 			kill(pid, SIGUSR1);
 		else
 			kill(pid, SIGUSR2);
-		usleep(25);
-		i++;
+		usleep(800);
+		i--;
 	}
-	return (1);
 }
 
-int	main(int arg, char **arv)
+void	send_message(int pid, char *msg)
 {
-	int	pid;
 	int	i;
 
-	if (arg != 3)
-	{
-		write(2, "Error\n", 6);
-		return (0);
-	}
-	pid = atoi(arv[1]);
-	if (pid == (0 || -1 || 1))
-	{
-		write(2, "Error\n", 6);
-		return (0);
-	}
 	i = 0;
-	while (arv[2][i])
+	while (msg[i])
 	{
-		ft_signal(pid, arv[2][i]);
+		ft_signal(pid, msg[i]);
 		i++;
 	}
-	return (1);
+	i = 8;
+	while (i > 0)
+	{
+		kill(pid, SIGUSR1);
+		usleep(150);
+		i--;
+	}
+}
+
+int	main(int argc, char **argv)
+{
+	int		pid;
+
+	if (argc != 3)
+	{
+		write(1, "ARG ERROR\n", 10);
+		return (0);
+	}	
+	pid = ft_atoi(argv[1]);
+	signal(SIGUSR2, ft_handler);
+	send_message(pid, argv[2]);
+	while (1)
+		pause();
+	return (0);
 }
