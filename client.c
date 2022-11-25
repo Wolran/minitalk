@@ -1,7 +1,21 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   client.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: vmuller <vmuller@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2022/11/25 12:59:50 by vmuller           #+#    #+#             */
+/*   Updated: 2022/11/25 12:59:50 by vmuller          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
 #include <stdlib.h>
+
+static int	g_flag = 0;
 
 int	ft_atoi(const char *str)
 {
@@ -28,50 +42,51 @@ int	ft_atoi(const char *str)
 }
 
 void	ft_handler(int sig)
-{
-	if (sig == SIGUSR2)
-		write(1, "The server has recived the message\n", 35);
-	exit(0);
-}
+{	
+	static int	bit = 1;
 
-void	ft_signal(int pid, char c)
-{
-	int	i;
-
-	i = 7;
-	while (i >= 0)
+	g_flag = 1;
+	if (bit == 8)
 	{
-		if (((c >> i) & 1) == 0)
-			kill(pid, SIGUSR1);
-		else
-			kill(pid, SIGUSR2);
-		usleep(800);
-		i--;
+		write(1, "byte received\n", 14);
+		bit = 0;
 	}
+	bit++;
+	(void)sig;
 }
 
-void	send_message(int pid, char *msg)
+static void	send_message(char *str, pid_t pid)
 {
-	int	i;
+	size_t	i;
+	size_t	j;
+	int		bit;
+	int		signal;
 
 	i = 0;
-	while (msg[i])
+	while (str[i])
 	{
-		ft_signal(pid, msg[i]);
+		j = 0;
+		while (j < 8)
+		{
+			bit = str[i] >> j & 1;
+			g_flag = 0;
+			if (bit << 1 == 0)
+				signal = SIGUSR1;
+			else
+				signal = SIGUSR2;
+			while (kill(pid, signal) != 0)
+				;
+			while (!g_flag)
+				;
+			j++;
+		}
 		i++;
-	}
-	i = 8;
-	while (i > 0)
-	{
-		kill(pid, SIGUSR1);
-		usleep(150);
-		i--;
 	}
 }
 
 int	main(int argc, char **argv)
 {
-	int		pid;
+	pid_t	pid;
 
 	if (argc != 3)
 	{
@@ -79,9 +94,8 @@ int	main(int argc, char **argv)
 		return (0);
 	}	
 	pid = ft_atoi(argv[1]);
-	signal(SIGUSR2, ft_handler);
-	send_message(pid, argv[2]);
-	while (1)
-		pause();
+	while (signal(SIGUSR1, ft_handler))
+		;
+	send_message(argv[2], pid);
 	return (0);
 }

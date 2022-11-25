@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   server.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: vmuller <vmuller@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2022/11/25 12:59:56 by vmuller           #+#    #+#             */
+/*   Updated: 2022/11/25 12:59:56 by vmuller          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include <unistd.h>
 #include <signal.h>
 #include <stdio.h>
@@ -25,28 +37,24 @@ void	ft_putnbr(int n)
 
 void	ft_handler(int sig, siginfo_t *info, void *context)
 {
-	static char	c = 0;
-	static int	i = 1;
+	static int				i;
+	static unsigned char	c;
+	int						bit;
 
 	(void)context;
 	if (sig == SIGUSR1)
-		c = c | 0;
+		bit = 0;
 	else
-		c = c | 1;
-	if (i == 8)
+		bit = 1;
+	c = c | bit << i;
+	if (i == 7)
 	{
-		i = 1;
-		if (c == 0)
-		{
-			kill(info->si_pid, SIGUSR2);
-			return ;
-		}
 		write(1, &c, 1);
 		c = 0;
-		return ;
 	}
-	c <<= 1;
-	i++;
+	i = (i + 1) % 8;
+	while (kill(info->si_pid, SIGUSR1))
+		;
 }
 
 int	main(void)
@@ -57,8 +65,8 @@ int	main(void)
 	ft_putnbr(getpid());
 	write(1, "\n", 1);
 	data.sa_sigaction = ft_handler;
-	sigemptyset(&data.sa_mask);
 	data.sa_flags = SA_SIGINFO;
+	sigemptyset(&data.sa_mask);
 	sigaction(SIGUSR1, &data, NULL);
 	sigaction(SIGUSR2, &data, NULL);
 	while (1)
